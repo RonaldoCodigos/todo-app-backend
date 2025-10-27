@@ -1,5 +1,5 @@
 // Em: routes/todoRoutes.js
-// VERSÃO CORRIGIDA (SEM A ROTA 3 DUPLICADA)
+// VERSÃO CORRIGIDA E COM LOGS NA ROTA GET
 
 const express = require('express');
 const router = express.Router();
@@ -12,17 +12,24 @@ const { protect } = require('../middleware/authMiddleware'); // Importa o "segur
 // são protegidas. O 'protect' vai rodar antes de qualquer uma delas.
 router.use(protect);
 
-// --- Rota 1: Buscar todas as tarefas ---
+// --- Rota 1: Buscar todas as tarefas (COM MAIS LOGS) ---
 // URL: GET /api/todos/
 router.get('/', async (req, res) => {
+  console.log(`[GET /api/todos] Requisição recebida do usuário ID: ${req.user.id}`); // Log 1
   try {
-    // req.user foi adicionado pelo middleware 'protect'
-    // Busca no banco todas as tarefas ONDE o campo 'user'
-    // é igual ao ID do usuário que está logado.
-    const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 }); // (Mais novos primeiro)
-    res.json(todos);
+    console.log("[GET /api/todos] Tentando buscar tarefas no MongoDB..."); // Log 2
+
+    // A linha que pode estar travando:
+    const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 });
+
+    console.log(`[GET /api/todos] Busca no MongoDB concluída. Encontradas ${todos.length} tarefas.`); // Log 3
+
+    res.json(todos); // Envia a resposta
+    console.log("[GET /api/todos] Resposta JSON enviada com sucesso."); // Log 4
+
   } catch (error) {
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    console.error("[GET /api/todos] ERRO DETALHADO NO CATCH:", error); // Log 5 (ERRO!)
+    res.status(500).json({ message: 'Erro no servidor ao buscar tarefas', error: error.message });
   }
 });
 
@@ -71,7 +78,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // --- Rota 5: Atualizar uma tarefa (EDITAR / CONCLUIR) ---
-// (Esta é a ÚNICA rota PUT, e agora será executada)
+// (Esta é a ÚNICA rota PUT)
 router.put('/:id', async (req, res) => {
   try {
     // 1. Busca a tarefa
