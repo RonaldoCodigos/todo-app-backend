@@ -29,3 +29,5 @@ function App() {
 }
 
 export default App;
+
+// Forçando atualização - 23/10/2025 19:45

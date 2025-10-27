@@ -1,32 +1,19 @@
-// Em: routes/todoRoutes.js
-// VERSÃO CORRIGIDA E COM LOGS NA ROTA GET
-
 const express = require('express');
 const router = express.Router();
-const Todo = require('../models/todoModel'); // Importa o "molde" da tarefa
-const { protect } = require('../middleware/authMiddleware'); // Importa o "segurança"
+const Todo = require('../models/todoModel');
+const { protect } = require('../middleware/authMiddleware');
 
-// --- IMPORTANTE ---
-// Colocamos o 'protect' aqui em cima.
-// Isso significa que TODAS as rotas definidas NESTE ARQUIVO
-// são protegidas. O 'protect' vai rodar antes de qualquer uma delas.
 router.use(protect);
 
 // --- Rota 1: Buscar todas as tarefas (COM MAIS LOGS) ---
-// URL: GET /api/todos/
 router.get('/', async (req, res) => {
   console.log(`[GET /api/todos] Requisição recebida do usuário ID: ${req.user.id}`); // Log 1
   try {
     console.log("[GET /api/todos] Tentando buscar tarefas no MongoDB..."); // Log 2
-
-    // A linha que pode estar travando:
     const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 });
-
     console.log(`[GET /api/todos] Busca no MongoDB concluída. Encontradas ${todos.length} tarefas.`); // Log 3
-
-    res.json(todos); // Envia a resposta
+    res.json(todos);
     console.log("[GET /api/todos] Resposta JSON enviada com sucesso."); // Log 4
-
   } catch (error) {
     console.error("[GET /api/todos] ERRO DETALHADO NO CATCH:", error); // Log 5 (ERRO!)
     res.status(500).json({ message: 'Erro no servidor ao buscar tarefas', error: error.message });
@@ -34,84 +21,46 @@ router.get('/', async (req, res) => {
 });
 
 // --- Rota 2: Criar uma nova tarefa ---
-// URL: POST /api/todos/
 router.post('/', async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text) {
-      return res.status(400).json({ message: 'O texto é obrigatório' });
-    }
-
-    const todo = new Todo({
-      text,
-      user: req.user.id, // Associa a tarefa ao usuário logado
-      completed: false,
-    });
-
+    if (!text) { return res.status(400).json({ message: 'O texto é obrigatório' }); }
+    const todo = new Todo({ text, user: req.user.id, completed: false });
     const createdTodo = await todo.save();
-    res.status(201).json(createdTodo); // 201 = Created
+    res.status(201).json(createdTodo);
   } catch (error) {
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+     console.error("[POST /api/todos] ERRO:", error); // Log de erro adicionado
+     res.status(500).json({ message: 'Erro no servidor', error: error.message });
   }
 });
 
 // --- Rota 4: Deletar uma tarefa ---
-// URL: DELETE /api/todos/:id
 router.delete('/:id', async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id);
-
-    if (!todo) {
-      return res.status(404).json({ message: 'Tarefa não encontrada' });
-    }
-
-    // --- Verificação de Autorização ---
-    if (todo.user.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Não autorizado' });
-    }
-
-    await todo.deleteOne(); // Deleta a tarefa
+    if (!todo) { return res.status(404).json({ message: 'Tarefa não encontrada' }); }
+    if (todo.user.toString() !== req.user.id) { return res.status(401).json({ message: 'Não autorizado' }); }
+    await todo.deleteOne();
     res.json({ message: 'Tarefa removida com sucesso' });
   } catch (error) {
+    console.error("[DELETE /api/todos/:id] ERRO:", error); // Log de erro adicionado
     res.status(500).json({ message: 'Erro no servidor', error: error.message });
   }
 });
 
 // --- Rota 5: Atualizar uma tarefa (EDITAR / CONCLUIR) ---
-// (Esta é a ÚNICA rota PUT)
 router.put('/:id', async (req, res) => {
   try {
-    // 1. Busca a tarefa
     const todo = await Todo.findById(req.params.id);
-
-    if (!todo) {
-      return res.status(404).json({ message: 'Tarefa não encontrada' });
-    }
-
-    // 2. Verificação de Autorização (ESSENCIAL)
-    if (todo.user.toString() !== req.user.id) {
-      return res.status(401).json({ message: 'Não autorizado' });
-    }
-
-    // 3. Prepara os campos que serão atualizados
+    if (!todo) { return res.status(404).json({ message: 'Tarefa não encontrada' }); }
+    if (todo.user.toString() !== req.user.id) { return res.status(401).json({ message: 'Não autorizado' }); }
     const updates = {};
-    if (req.body.text !== undefined) {
-      updates.text = req.body.text;
-    }
-    if (req.body.completed !== undefined) {
-      updates.completed = req.body.completed;
-    }
-
-    // 4. Executa a atualização no banco de dados
-    const updatedTodo = await Todo.findByIdAndUpdate(
-      req.params.id, // O ID da tarefa a ser atualizada
-      updates,        // Os dados a serem modificados
-      { new: true }   // Opção para retornar o documento novo
-    );
-
-    res.json(updatedTodo); // Retorna o documento atualizado
-
+    if (req.body.text !== undefined) { updates.text = req.body.text; }
+    if (req.body.completed !== undefined) { updates.completed = req.body.completed; }
+    const updatedTodo = await Todo.findByIdAndUpdate( req.params.id, updates, { new: true } );
+    res.json(updatedTodo);
   } catch (error) {
+    console.error("[PUT /api/todos/:id] ERRO:", error); // Log de erro adicionado
     res.status(500).json({ message: 'Erro no servidor', error: error.message });
   }
 });

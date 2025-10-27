@@ -4,4 +4,16 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4ZjkwOGJlY2U0ZDZhOGNlYzQ0MGU0ZCI
 
 usuario3@teste.com
 usuario4@teste.com
+usuario5@teste.com 
+usuario6@teste.com 
+usuario7@teste.com 
+usuario8@teste.com 
 senha123
+
+https://todo-app-backend-uyb2.onrender.com/
+
+https://todo-app-frontend-ten-nu.vercel.app/login
+
+Falhas:
+2-Alterar tarefas;
+3-Excluir tarefas;

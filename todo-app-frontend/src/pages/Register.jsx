@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import axios from 'axios';
-import { useNavigate, Link as RouterLink } from 'react-router-dom'; // Importa Link para navegação
-import { useAuth } from '../context/AuthContext';
+// Em: src/pages/Register.jsx
+// VERSÃO FINAL (Usando apiClient)
 
-// 1. Importações do Material-UI
+import { useState } from 'react';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import apiClient from '../api/axiosConfig'; // Usa apiClient
+
+// Importações do Material-UI
 import { Container, Box, Typography, TextField, Button, Alert, Link } from '@mui/material';
 
 function Register() {
@@ -17,14 +20,14 @@ function Register() {
     e.preventDefault();
     setError(null);
 
-    // Validação simples (o MUI 'required' já ajuda, mas é bom ter)
     if (!email || !password) {
       setError('Por favor, preencha todos os campos.');
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:3000/api/users/register', {
+      // Usa apiClient
+      const response = await apiClient.post('/users/register', {
         email: email,
         password: password
       });
@@ -39,81 +42,21 @@ function Register() {
     }
   };
 
-  // 2. Este é o novo JSX com Material-UI
+  // O JSX com Material-UI continua o mesmo
   return (
-    // 'Container' centraliza o conteúdo e define uma largura máxima
     <Container component="main" maxWidth="xs">
-      {/* 'Box' é um container genérico (pense <div>)
-           Aqui, usamos para centralizar tudo verticalmente */}
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Typography component="h1" variant="h5">
-          Registrar Nova Conta
-        </Typography>
-
-        {/* 'Box' usado como formulário */}
-        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-          
-          {/* Mostra a mensagem de erro (se houver) */}
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          {/* Campo de E-mail */}
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="email"
-            label="Endereço de E-mail"
-            name="email"
-            autoComplete="email"
-            autoFocus
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          {/* Campo de Senha */}
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label="Senha (mínimo 6 caracteres)"
-            type="password"
-            id="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          {/* Botão de Envio */}
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained" // Define o estilo "preenchido"
-            sx={{ mt: 3, mb: 2 }} // Margem
-          >
-            Registrar
-          </Button>
-
-          {/* Link para a página de Login */}
-          <Link component={RouterLink} to="/login" variant="body2">
-            {"Já tem uma conta? Faça Login"}
-          </Link>
-
+        {/* ... (JSX igual ao anterior) ... */}
+        <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', }} >
+          <Typography component="h1" variant="h5"> Registrar Nova Conta </Typography>
+          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+            {error && ( <Alert severity="error" sx={{ width: '100%', mb: 2 }}> {error} </Alert> )}
+            <TextField margin="normal" required fullWidth id="email" label="Endereço de E-mail" name="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
+            <TextField margin="normal" required fullWidth name="password" label="Senha (mínimo 6 caracteres)" type="password" id="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} > Registrar </Button>
+            <Link component={RouterLink} to="/login" variant="body2"> {"Já tem uma conta? Faça Login"} </Link>
+          </Box>
         </Box>
-      </Box>
     </Container>
   );
 }
-
 export default Register;

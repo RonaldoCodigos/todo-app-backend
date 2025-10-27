@@ -1,20 +1,21 @@
+// ----- DEBUGGING -----
+console.log("VITE_API_URL lida em main.jsx:", import.meta.env.VITE_API_URL);
+// ----- FIM DEBUGGING -----
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-
-// 1. Importe o tema
 import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline'; // Reseta o CSS
+import CssBaseline from '@mui/material/CssBaseline';
 import theme from './theme';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    {/* 2. Envolva o app com o Provedor de Tema */}
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Garante que o fundo escuro seja aplicado */}
+      <CssBaseline />
       <BrowserRouter>
         <AuthProvider>
           <App />
