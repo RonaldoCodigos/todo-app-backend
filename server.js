@@ -44,8 +44,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Habilita a resposta correta para as requisições preflight OPTIONS para todas as rotas
-app.options('*', cors(corsOptions));
 
 app.use(express.json()); // Permite que o servidor entenda o formato JSON
 
