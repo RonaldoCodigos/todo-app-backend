@@ -1,3 +1,6 @@
+// Em: routes/todoRoutes.js
+// VERSÃO FINAL LIMPA
+
 const express = require('express');
 const router = express.Router();
 const Todo = require('../models/todoModel');
@@ -5,22 +8,18 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
-// --- Rota 1: Buscar todas as tarefas (COM MAIS LOGS) ---
+// GET /api/todos
 router.get('/', async (req, res) => {
-  console.log(`[GET /api/todos] Requisição recebida do usuário ID: ${req.user.id}`); // Log 1
   try {
-    console.log("[GET /api/todos] Tentando buscar tarefas no MongoDB..."); // Log 2
     const todos = await Todo.find({ user: req.user.id }).sort({ createdAt: -1 });
-    console.log(`[GET /api/todos] Busca no MongoDB concluída. Encontradas ${todos.length} tarefas.`); // Log 3
     res.json(todos);
-    console.log("[GET /api/todos] Resposta JSON enviada com sucesso."); // Log 4
   } catch (error) {
-    console.error("[GET /api/todos] ERRO DETALHADO NO CATCH:", error); // Log 5 (ERRO!)
+    console.error("Erro em GET /todos:", error.message); // Log de erro básico
     res.status(500).json({ message: 'Erro no servidor ao buscar tarefas', error: error.message });
   }
 });
 
-// --- Rota 2: Criar uma nova tarefa ---
+// POST /api/todos
 router.post('/', async (req, res) => {
   try {
     const { text } = req.body;
@@ -29,12 +28,12 @@ router.post('/', async (req, res) => {
     const createdTodo = await todo.save();
     res.status(201).json(createdTodo);
   } catch (error) {
-     console.error("[POST /api/todos] ERRO:", error); // Log de erro adicionado
-     res.status(500).json({ message: 'Erro no servidor', error: error.message });
+     console.error("Erro em POST /todos:", error.message); // Log de erro básico
+     res.status(500).json({ message: 'Erro no servidor ao criar tarefa', error: error.message });
   }
 });
 
-// --- Rota 4: Deletar uma tarefa ---
+// DELETE /api/todos/:id
 router.delete('/:id', async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id);
@@ -43,12 +42,12 @@ router.delete('/:id', async (req, res) => {
     await todo.deleteOne();
     res.json({ message: 'Tarefa removida com sucesso' });
   } catch (error) {
-    console.error("[DELETE /api/todos/:id] ERRO:", error); // Log de erro adicionado
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    console.error("Erro em DELETE /todos/:id:", error.message); // Log de erro básico
+    res.status(500).json({ message: 'Erro no servidor ao deletar tarefa', error: error.message });
   }
 });
 
-// --- Rota 5: Atualizar uma tarefa (EDITAR / CONCLUIR) ---
+// PUT /api/todos/:id
 router.put('/:id', async (req, res) => {
   try {
     const todo = await Todo.findById(req.params.id);
@@ -60,8 +59,8 @@ router.put('/:id', async (req, res) => {
     const updatedTodo = await Todo.findByIdAndUpdate( req.params.id, updates, { new: true } );
     res.json(updatedTodo);
   } catch (error) {
-    console.error("[PUT /api/todos/:id] ERRO:", error); // Log de erro adicionado
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
+    console.error("Erro em PUT /todos/:id:", error.message); // Log de erro básico
+    res.status(500).json({ message: 'Erro no servidor ao atualizar tarefa', error: error.message });
   }
 });
 

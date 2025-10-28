@@ -1,6 +1,5 @@
-// ----- DEBUGGING -----
-console.log("VITE_API_URL lida em main.jsx:", import.meta.env.VITE_API_URL);
-// ----- FIM DEBUGGING -----
+// Em: src/main.jsx
+// VERSÃO FINAL LIMPA
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -8,19 +7,16 @@ import App from './App.jsx';
 import './index.css';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import theme from './theme';
+import { AppThemeProvider } from './context/ThemeContext'; // Usa o provedor de tema
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <AppThemeProvider> {/* Envolve com o provedor de tema */}
       <BrowserRouter>
         <AuthProvider>
           <App />
         </AuthProvider>
       </BrowserRouter>
-    </ThemeProvider>
-  </React.StrictMode>
+    </AppThemeProvider>
+  </React.StrictMode>,
 );

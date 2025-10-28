@@ -1,10 +1,15 @@
+// Em: src/pages/Login.jsx
+// VERSÃO FINAL LIMPA (com visualizar senha)
+
 import { useState } from 'react';
-import apiClient from '../api/axiosConfig'; // Usa apiClient
+import apiClient from '../api/axiosConfig';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 // Importações do Material-UI
-import { Container, Box, Typography, TextField, Button, Alert, Link } from '@mui/material';
+import { Container, Box, Typography, TextField, Button, Alert, Link, InputAdornment, IconButton } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -12,50 +17,58 @@ function Login() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleMouseDownPassword = (event) => event.preventDefault();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    console.log("[Login.jsx] handleSubmit iniciado."); // Log Adicional
-
     try {
-      // Lê a URL base do apiClient para confirmar
-      const baseUrlUsed = apiClient.defaults.baseURL;
-      console.log("[Login.jsx] apiClient baseURL:", baseUrlUsed); // Log Adicional
-      const loginUrl = '/users/login'; // Endpoint relativo
-      console.log("[Login.jsx] Tentando chamar:", `${baseUrlUsed}${loginUrl}`); // Log Adicional
-
-      // Usa apiClient
-      const response = await apiClient.post(loginUrl, {
-        email: email,
-        password: password
-      });
-
-      console.log('Login bem-sucedido:', response.data);
+      const response = await apiClient.post('/users/login', { email, password });
       login(response.data.token);
       navigate('/');
-
     } catch (err) {
-      console.error('[Login.jsx] Erro no login:', err.response?.data?.message || err.message);
-      console.error('[Login.jsx] Erro completo:', err);
+      // Define o erro para exibição no Alert
       setError(err.response?.data?.message || 'Erro ao fazer login.');
+      // Log do erro apenas no console de desenvolvimento (opcional)
+      console.error('Erro no login:', err);
     }
   };
 
-  // O return com o JSX do Material UI continua o mesmo
   return (
     <Container component="main" maxWidth="xs">
-        {/* ... (JSX igual ao anterior) ... */}
-         <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', }} >
-           <Typography component="h1" variant="h5"> Login </Typography>
-           <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-             {error && ( <Alert severity="error" sx={{ width: '100%', mb: 2 }}> {error} </Alert> )}
-             <TextField margin="normal" required fullWidth id="email" label="Endereço de E-mail" name="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
-             <TextField margin="normal" required fullWidth name="password" label="Senha" type="password" id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-             <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} > Entrar </Button>
-             <Link component={RouterLink} to="/register" variant="body2"> {"Não tem uma conta? Registre-se"} </Link>
-           </Box>
-         </Box>
+      <Box sx={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', }} >
+        <Typography component="h1" variant="h5"> Login </Typography>
+        <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+          {error && ( <Alert severity="error" sx={{ width: '100%', mb: 2 }}> {error} </Alert> )}
+          <TextField margin="normal" required fullWidth id="email" label="Endereço de E-mail" name="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Senha"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton aria-label="toggle password visibility" onClick={handleClickShowPassword} onMouseDown={handleMouseDownPassword} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} > Entrar </Button>
+          <Link component={RouterLink} to="/register" variant="body2"> {"Não tem uma conta? Registre-se"} </Link>
+        </Box>
+      </Box>
     </Container>
   );
 }

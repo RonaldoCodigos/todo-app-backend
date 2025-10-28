@@ -1,6 +1,10 @@
+// Em: src/pages/Dashboard.jsx
+// VERSÃO FINAL LIMPA (com tema)
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import apiClient from '../api/axiosConfig'; // Usa o apiClient configurado
+import apiClient from '../api/axiosConfig';
+import { useAppTheme } from '../context/ThemeContext';
 
 // Importações do Material-UI
 import {
@@ -12,12 +16,15 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import LogoutIcon from '@mui/icons-material/Logout';
 import EditIcon from '@mui/icons-material/Edit';
+import Brightness4Icon from '@mui/icons-material/Brightness4';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 function Dashboard() {
   const { logout } = useAuth();
+  const { mode, toggleThemeMode } = useAppTheme();
   const [todos, setTodos] = useState([]);
   const [text, setText] = useState('');
-  const [loading, setLoading] = useState(true); // Começa carregando
+  const [loading, setLoading] = useState(true);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [todoToDelete, setTodoToDelete] = useState(null);
@@ -25,134 +32,78 @@ function Dashboard() {
   const [todoToEdit, setTodoToEdit] = useState(null);
   const [newText, setNewText] = useState('');
 
-  // --- Efeito: Carregar Tarefas (COM LOGS DETALHADOS) ---
+  // --- Efeito: Carregar Tarefas ---
   useEffect(() => {
-    const currentToken = localStorage.getItem('token');
-    console.log("[Dashboard useEffect] Iniciando. Token atual:", currentToken ? "Existe" : "NÃO Existe"); // Log A
-
     const fetchTodos = async () => {
-      if (!currentToken) {
-        console.log("[Dashboard useEffect] Token NÃO disponível no início. Abortando fetch."); // Log B
-        setLoading(false);
-        return;
-      }
       try {
-        console.log("[Dashboard useEffect] Token disponível. Setando loading=true..."); // Log C
         setLoading(true);
-        console.log("[Dashboard useEffect] Fazendo chamada GET /todos..."); // Log D
-        // Passa a configuração do token manualmente para ter certeza (opcional com interceptor)
-        // const config = { headers: { Authorization: `Bearer ${currentToken}` } };
-        // const response = await apiClient.get('/todos', config);
-        const response = await apiClient.get('/todos'); // Confia no interceptor
-        console.log("[Dashboard useEffect] Chamada GET /todos BEM-SUCEDIDA. Resposta:", response.data); // Log E
+        const response = await apiClient.get('/todos');
         setTodos(response.data);
-        console.log("[Dashboard useEffect] Estado 'todos' atualizado."); // Log F
       } catch (err) {
         setSnackbar({ open: true, message: 'Erro ao carregar tarefas.', severity: 'error' });
-        console.error("[Dashboard useEffect] ERRO na chamada GET /todos:", err); // Log G (ERRO!)
-        if (err.response) { console.error("[Dashboard useEffect] Erro - Status:", err.response.status); console.error("[Dashboard useEffect] Erro - Data:", err.response.data); }
-        else if (err.request) { console.error("[Dashboard useEffect] Erro - Sem resposta:", err.request); }
-        else { console.error("[Dashboard useEffect] Erro - Configuração:", err.message); }
+        console.error("Erro fetchTodos:", err); // Mantém log de erro
       } finally {
-        console.log("[Dashboard useEffect] Entrando no finally. Setando loading=false..."); // Log H
         setLoading(false);
-        console.log("[Dashboard useEffect] Finalizado."); // Log I
       }
     };
     fetchTodos();
   }, []); // Roda só uma vez
 
-  // --- Função: Criar nova tarefa (COM LOGS) ---
+  // --- Função: Criar nova tarefa ---
   const handleCreateTodo = async (e) => {
     e.preventDefault();
-    console.log("[handleCreateTodo] Iniciado. Texto:", text); // Log Create 1
-    if (!text.trim()) {
-      console.log("[handleCreateTodo] Texto vazio, abortando."); // Log Create 1a
-      return;
-    }
+    if (!text.trim()) return;
     try {
-      console.log("[handleCreateTodo] Tentando chamar apiClient.post..."); // Log Create 2
       const response = await apiClient.post('/todos', { text });
-      console.log("[handleCreateTodo] Chamada POST bem-sucedida:", response.data); // Log Create 3
       setTodos([response.data, ...todos]);
       setText('');
-      const successSnackbarState = { open: true, message: 'Tarefa adicionada com sucesso!', severity: 'success' };
-      setSnackbar(successSnackbarState);
-      console.log("[handleCreateTodo] Estado Snackbar definido:", successSnackbarState); // Log Create 4
+      setSnackbar({ open: true, message: 'Tarefa adicionada com sucesso!', severity: 'success' });
     } catch (err) {
-      console.error("[handleCreateTodo] ERRO no catch:", err); // Log Create 5 (ERRO!)
-      if (err.response) { console.error("[handleCreateTodo] Erro - Status:", err.response.status); console.error("[handleCreateTodo] Erro - Data:", err.response.data); }
-      else if (err.request) { console.error("[handleCreateTodo] Erro - Sem resposta:", err.request); }
-      else { console.error("[handleCreateTodo] Erro - Configuração:", err.message); }
       setSnackbar({ open: true, message: 'Erro ao criar tarefa.', severity: 'error' });
+      console.error("Erro handleCreateTodo:", err); // Mantém log de erro
     }
   };
 
-  // --- Funções: Deletar Tarefa (COM LOGS) ---
-  const handleOpenDeleteDialog = (id) => {
-    console.log("[handleOpenDeleteDialog] Chamada com ID:", id); // Log Delete Modal 1
-    setTodoToDelete(id);
-    setOpenDeleteDialog(true);
-  };
+  // --- Funções: Deletar Tarefa ---
+  const handleOpenDeleteDialog = (id) => { setTodoToDelete(id); setOpenDeleteDialog(true); };
   const handleCloseDeleteDialog = () => { setOpenDeleteDialog(false); setTodoToDelete(null); };
   const handleConfirmDelete = async () => {
-    console.log("[handleConfirmDelete] Iniciado. ID para deletar:", todoToDelete); // Log Delete 1
     try {
-      console.log("[handleConfirmDelete] Tentando chamar apiClient.delete..."); // Log Delete 2
       await apiClient.delete(`/todos/${todoToDelete}`);
-      console.log("[handleConfirmDelete] Chamada DELETE bem-sucedida."); // Log Delete 3
       setTodos(todos.filter((todo) => todo._id !== todoToDelete));
       setSnackbar({ open: true, message: 'Tarefa deletada com sucesso!', severity: 'success' });
     } catch (err) {
-      console.error("[handleConfirmDelete] ERRO no catch:", err); // Log Delete 4 (ERRO!)
-      if (err.response) { console.error("[handleConfirmDelete] Erro - Status:", err.response.status); console.error("[handleConfirmDelete] Erro - Data:", err.response.data); }
-      else if (err.request) { console.error("[handleConfirmDelete] Erro - Sem resposta:", err.request); }
-      else { console.error("[handleConfirmDelete] Erro - Configuração:", err.message); }
       setSnackbar({ open: true, message: 'Erro ao deletar tarefa.', severity: 'error' });
+      console.error("Erro handleConfirmDelete:", err); // Mantém log de erro
     } finally {
       handleCloseDeleteDialog();
     }
   };
 
-  // --- Funções: Editar Tarefa (Modal) (COM LOGS) ---
-  const handleOpenEditDialog = (todo) => {
-     console.log("[handleOpenEditDialog] Abrindo modal para tarefa:", todo); // Log Edit Modal 1
-     setTodoToEdit(todo); setNewText(todo.text); setOpenEditDialog(true);
-  };
+  // --- Funções: Editar Tarefa (Modal) ---
+  const handleOpenEditDialog = (todo) => { setTodoToEdit(todo); setNewText(todo.text); setOpenEditDialog(true); };
   const handleCloseEditDialog = () => { setOpenEditDialog(false); setTodoToEdit(null); setNewText(''); };
   const handleConfirmEdit = async () => {
-    console.log("[handleConfirmEdit] Iniciado. ID:", todoToEdit?._id, "Novo texto:", newText); // Log Edit 1
     try {
-      console.log("[handleConfirmEdit] Tentando chamar apiClient.put..."); // Log Edit 2
       const response = await apiClient.put(`/todos/${todoToEdit._id}`, { text: newText });
-      console.log("[handleConfirmEdit] Chamada PUT bem-sucedida:", response.data); // Log Edit 3
       setTodos(todos.map(todo => todo._id === todoToEdit._id ? response.data : todo ));
       setSnackbar({ open: true, message: 'Tarefa atualizada com sucesso!', severity: 'success' });
     } catch (err) {
-      console.error("[handleConfirmEdit] ERRO no catch:", err); // Log Edit 4 (ERRO!)
-      if (err.response) { console.error("[handleConfirmEdit] Erro - Status:", err.response.status); console.error("[handleConfirmEdit] Erro - Data:", err.response.data); }
-      else if (err.request) { console.error("[handleConfirmEdit] Erro - Sem resposta:", err.request); }
-      else { console.error("[handleConfirmEdit] Erro - Configuração:", err.message); }
       setSnackbar({ open: true, message: 'Erro ao atualizar tarefa.', severity: 'error' });
+      console.error("Erro handleConfirmEdit:", err); // Mantém log de erro
     } finally {
       handleCloseEditDialog();
     }
   };
 
-  // --- Função: Marcar como Concluído (Checkbox) (COM LOGS) ---
+  // --- Função: Marcar como Concluído (Checkbox) ---
   const handleToggleComplete = async (todo) => {
-    console.log("[handleToggleComplete] Iniciado para tarefa ID:", todo._id, "Status atual:", todo.completed); // Log Toggle 1
     try {
-      console.log("[handleToggleComplete] Tentando chamar apiClient.put com completed:", !todo.completed); // Log Toggle 2
       const response = await apiClient.put(`/todos/${todo._id}`, { completed: !todo.completed });
-      console.log("[handleToggleComplete] Chamada PUT bem-sucedida:", response.data); // Log Toggle 3
       setTodos(todos.map(t => t._id === todo._id ? response.data : t ));
     } catch (err) {
-      console.error("[handleToggleComplete] ERRO no catch:", err); // Log Toggle 4 (ERRO!)
-      if (err.response) { console.error("[handleToggleComplete] Erro - Status:", err.response.status); console.error("[handleToggleComplete] Erro - Data:", err.response.data); }
-      else if (err.request) { console.error("[handleToggleComplete] Erro - Sem resposta:", err.request); }
-      else { console.error("[handleToggleComplete] Erro - Configuração:", err.message); }
       setSnackbar({ open: true, message: 'Erro ao atualizar status.', severity: 'error' });
+      console.error("Erro handleToggleComplete:", err); // Mantém log de erro
     }
   };
 
@@ -160,15 +111,15 @@ function Dashboard() {
   const handleSnackbarClose = (event, reason) => { if (reason === 'clickaway') return; setSnackbar({ ...snackbar, open: false }); };
   const handleLogout = () => logout();
 
-  // Log para debug do modal de delete
-  console.log("[Dashboard Render] Estado openDeleteDialog:", openDeleteDialog);
-
   // --- Renderização ---
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static">
          <Toolbar>
            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}> Minhas Tarefas </Typography>
+           <IconButton sx={{ ml: 1 }} onClick={toggleThemeMode} color="inherit" title={mode === 'dark' ? "Mudar para tema claro" : "Mudar para tema escuro"}>
+             {mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
+           </IconButton>
            <Button color="inherit" startIcon={<LogoutIcon />} onClick={handleLogout}> Sair </Button>
          </Toolbar>
       </AppBar>
@@ -199,14 +150,12 @@ function Dashboard() {
         )}
       </Container>
 
-      {/* Modal de Delete */}
+      {/* Modais e Snackbar */}
       <Dialog open={openDeleteDialog} onClose={handleCloseDeleteDialog}>
         <DialogTitle>Confirmar Exclusão</DialogTitle>
         <DialogContent> <DialogContentText> Você tem certeza que deseja excluir esta tarefa? </DialogContentText> </DialogContent>
         <DialogActions> <Button onClick={handleCloseDeleteDialog}>Cancelar</Button> <Button onClick={handleConfirmDelete} color="error" autoFocus>Excluir</Button> </DialogActions>
       </Dialog>
-
-      {/* Modal de Edição */}
       <Dialog open={openEditDialog} onClose={handleCloseEditDialog}>
          <DialogTitle>Editar Tarefa</DialogTitle>
          <DialogContent>
@@ -215,14 +164,10 @@ function Dashboard() {
          </DialogContent>
          <DialogActions> <Button onClick={handleCloseEditDialog}>Cancelar</Button> <Button onClick={handleConfirmEdit}>Salvar</Button> </DialogActions>
        </Dialog>
-
-      {/* Snackbar de Notificação */}
-      <Snackbar open={snackbar.open} autoHideDuration={10000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
          <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}> {snackbar.message} </Alert>
        </Snackbar>
-
     </Box>
   );
 }
-
 export default Dashboard;
