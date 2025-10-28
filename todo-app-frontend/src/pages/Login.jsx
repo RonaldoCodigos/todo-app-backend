@@ -1,15 +1,14 @@
-// Em: src/pages/Login.jsx
-// VERSÃO FINAL LIMPA (com visualizar senha)
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import apiClient from '../api/axiosConfig';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 // Importações do Material-UI
-import { Container, Box, Typography, TextField, Button, Alert, Link, InputAdornment, IconButton } from '@mui/material';
+import { Container, Box, Typography, TextField, Button, Alert, Link, InputAdornment, IconButton, FormControlLabel, Checkbox } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+
+const REMEMBER_ME_KEY = 'rememberedEmail';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -18,21 +17,36 @@ function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem(REMEMBER_ME_KEY);
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
   const handleMouseDownPassword = (event) => event.preventDefault();
+  const handleRememberMeChange = (event) => {
+    setRememberMe(event.target.checked);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     try {
       const response = await apiClient.post('/users/login', { email, password });
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, email);
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY);
+      }
       login(response.data.token);
       navigate('/');
     } catch (err) {
-      // Define o erro para exibição no Alert
       setError(err.response?.data?.message || 'Erro ao fazer login.');
-      // Log do erro apenas no console de desenvolvimento (opcional)
       console.error('Erro no login:', err);
     }
   };
@@ -56,17 +70,32 @@ function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton aria-label="toggle password visibility" onClick={handleClickShowPassword} onMouseDown={handleMouseDownPassword} edge="end">
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
+              endAdornment: ( <InputAdornment position="end"> <IconButton aria-label="toggle password visibility" onClick={handleClickShowPassword} onMouseDown={handleMouseDownPassword} edge="end"> {showPassword ? <VisibilityOff /> : <Visibility />} </IconButton> </InputAdornment> ),
             }}
           />
+          <FormControlLabel
+            control={<Checkbox value="remember" color="primary" checked={rememberMe} onChange={handleRememberMeChange} />}
+            label="Lembrar meu e-mail"
+          />
+          <Typography variant="caption" display="block" gutterBottom sx={{ mt: 1, textAlign: 'center', color: 'text.secondary' }}>
+            Sua sessão permanecerá ativa por 30 dias.
+          </Typography>
+
+          {/* === ADICIONADO LINK "ESQUECEU A SENHA?" === */}
+          <Box sx={{ textAlign: 'right', width: '100%', mt: 1 }}>
+            <Link component={RouterLink} to="/forgot-password" variant="body2">
+              Esqueceu a senha?
+            </Link>
+          </Box>
+          {/* === FIM DA ADIÇÃO === */}
+
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }} > Entrar </Button>
-          <Link component={RouterLink} to="/register" variant="body2"> {"Não tem uma conta? Registre-se"} </Link>
+
+          {/* Link para Registro */}
+          <Link component={RouterLink} to="/register" variant="body2" sx={{ textAlign: 'center', display: 'block' }}>
+            {"Não tem uma conta? Registre-se"}
+          </Link>
+
         </Box>
       </Box>
     </Container>
