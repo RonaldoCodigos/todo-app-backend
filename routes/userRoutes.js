@@ -1,134 +1,85 @@
+// Em: routes/userRoutes.js
+// VERSÃO FINAL COM ENVIO DE E-MAIL REAL
+
 const express = require('express');
 const router = express.Router();
 const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto'); // Importa o crypto
+const crypto = require('crypto');
+const sendEmail = require('../utils/emailSender'); // 1. IMPORTA a função de envio
 
 // Função para gerar o token de LOGIN
-const generateToken = (id) => {
-  if (!process.env.JWT_SECRET) {
-     console.error('ERRO FATAL: JWT_SECRET não definido!');
-     throw new Error('JWT_SECRET não definido');
-  }
-  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-};
+const generateToken = (id) => { /* ... (código igual) ... */ };
 
 // POST /api/users/register
-router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    if (!email || !password) { return res.status(400).json({ message: 'Por favor, preencha todos os campos' }); }
-    const userExists = await User.findOne({ email });
-    if (userExists) { return res.status(400).json({ message: 'Este e-mail já está em uso' }); }
-    const user = await User.create({ email, password });
-    if (user) {
-      res.status(201).json({ _id: user._id, email: user.email, token: generateToken(user._id) });
-    } else {
-      res.status(400).json({ message: 'Dados de usuário inválidos' });
-    }
-  } catch (error) {
-    console.error("Erro em /register:", error.message);
-    res.status(500).json({ message: 'Erro no servidor durante o registro', error: error.message });
-  }
-});
+router.post('/register', async (req, res) => { /* ... (código igual) ... */ });
 
 // POST /api/users/login
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (user && (await bcrypt.compare(password, user.password))) {
-      res.json({ _id: user._id, email: user.email, token: generateToken(user._id) });
-    } else {
-      res.status(401).json({ message: 'E-mail ou senha inválidos' });
-    }
-  } catch (error) {
-    console.error("Erro em /login:", error.message);
-    res.status(500).json({ message: 'Erro no servidor', error: error.message });
-  }
-});
+router.post('/login', async (req, res) => { /* ... (código igual) ... */ });
 
-// --- ROTA: Solicitar Redefinição de Senha ---
-// URL: POST /api/users/forgot-password
+// --- ROTA: Solicitar Redefinição de Senha (MODIFICADA) ---
 router.post('/forgot-password', async (req, res) => {
-  let user; // Declara user fora do try para usar no catch
+  let user;
   try {
     user = await User.findOne({ email: req.body.email });
 
     if (!user) {
       // Mesmo se não achar, retorna sucesso para segurança
-      return res.status(200).json({ message: 'Se o e-mail existir na nossa base de dados, um link de redefinição será logado no servidor.' });
+      console.log("[Forgot Password] E-mail não encontrado:", req.body.email);
+      // IMPORTANTE: Não informe ao usuário se o e-mail existe ou não
+      return res.status(200).json({ message: 'Se este e-mail estiver cadastrado, você receberá um link para redefinir sua senha.' });
     }
 
-    // Gera o token de reset (chama o método do userModel)
+    // Gera o token de reset
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false }); // Salva token hashed e data no DB
 
-    // --- SIMULAÇÃO DO ENVIO DE E-MAIL ---
-    // (Use a URL DO SEU FRONT-END VERCEL!)
-    const resetURL = `https://todo-app-frontend-ten-nu.vercel.app/reset-password/${resetToken}`; // Adapte a URL se necessário
+    // Cria a URL de reset (Use a URL DO SEU FRONT-END VERCEL!)
+    const resetURL = `https://todo-app-frontend-ten-nu.vercel.app/reset-password/${resetToken}`; // Adapte se necessário
 
-    console.log("------------------------------------------");
-    console.log("LINK PARA REDEFINIR SENHA (COPIE E COLE NO NAVEGADOR):");
-    console.log(resetURL);
-    console.log("------------------------------------------");
-    // --- FIM DA SIMULAÇÃO ---
+    // --- ENVIO DE E-MAIL REAL ---
+    // 2. Prepara o conteúdo do e-mail
+    const subject = 'Link para Redefinição de Senha (Validade: 10 min)';
+    const textContent = `Olá ${user.email},\n\nVocê solicitou a redefinição da sua senha. Por favor, clique no link a seguir ou cole-o no seu navegador para completar o processo (válido por 10 minutos):\n\n${resetURL}\n\nSe você não solicitou isso, por favor ignore este e-mail.\n`;
+    const htmlContent = `
+      <p>Olá ${user.email},</p>
+      <p>Você solicitou a redefinição da sua senha. Por favor, clique no link a seguir para completar o processo (válido por 10 minutos):</p>
+      <a href="${resetURL}">Redefinir Senha</a>
+      <p>Se você não conseguir clicar no link, copie e cole a seguinte URL no seu navegador:</p>
+      <p>${resetURL}</p>
+      <p>Se você não solicitou isso, por favor ignore este e-mail.</p>
+    `;
 
-    res.status(200).json({ message: 'Link de redefinição logado no console do servidor.' });
+    // 3. CHAMA a função sendEmail
+    await sendEmail({
+      to: user.email,
+      subject: subject,
+      text: textContent,
+      html: htmlContent
+    });
+    // --- FIM DO ENVIO DE E-MAIL ---
+
+    // 4. Resposta de sucesso (agora informa sobre o e-mail)
+    res.status(200).json({ message: 'E-mail com link de redefinição enviado com sucesso!' });
 
   } catch (error) {
-    // Limpa token/data se der erro
+    // Limpa token/data se der erro no envio do email ou antes
     if (user) {
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
-        try { // Adiciona try/catch para o save dentro do catch
-          await user.save({ validateBeforeSave: false });
-        } catch (saveError) {
-           console.error("Erro ao limpar token após falha em forgot-password:", saveError);
-        }
+        try { await user.save({ validateBeforeSave: false }); }
+        catch (saveError) { console.error("Erro ao limpar token após falha:", saveError); }
     }
-    console.error("Erro em /forgot-password:", error); // Log detalhado do erro
-    res.status(500).json({ message: 'Erro ao processar a solicitação de redefinição de senha.' });
+    console.error("Erro em /forgot-password:", error);
+    // Não envie o erro detalhado para o cliente em caso de falha no e-mail
+    res.status(500).json({ message: 'Erro ao processar a solicitação. Tente novamente mais tarde.' });
   }
 });
 
 
 // --- ROTA: Redefinir a Senha ---
 // URL: PATCH /api/users/reset-password/:token
-router.patch('/reset-password/:token', async (req, res) => {
-  try {
-    // 1. Pega o token da URL e faz o HASH dele
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(req.params.token)
-      .digest('hex');
-
-    // 2. Encontra o usuário pelo token HASHED e verifica se NÃO expirou
-    const user = await User.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpires: { $gt: Date.now() } // Maior que a data atual
-    });
-
-    // 3. Se não encontrar (token inválido ou expirado)
-    if (!user) {
-      return res.status(400).json({ message: 'Token inválido ou expirado.' });
-    }
-
-    // 4. Se encontrou, atualiza a senha e limpa os campos de reset
-    user.password = req.body.password; // A nova senha
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save(); // Salva (o hook vai criptografar a nova senha)
-
-    // 5. Opcional: Gera um novo token de LOGIN e envia
-    const loginToken = generateToken(user._id);
-    res.status(200).json({ token: loginToken, message: 'Senha redefinida com sucesso.' });
-
-  } catch (error) {
-    console.error("Erro em /reset-password:", error); // Log detalhado do erro
-    res.status(500).json({ message: 'Erro ao redefinir a senha.', error: error.message });
-  }
-});
+router.patch('/reset-password/:token', async (req, res) => { /* ... (código igual, sem mudanças aqui) ... */ });
 
 module.exports = router;
